@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search> 
+  
+    
+    <entry>
+      <title><![CDATA[test]]></title>
+      <url>/2018/02/02/test/</url>
+      <content type="html"><![CDATA[<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> keras</span><br><span class="line">keras.__version__</span><br></pre></td></tr></table></figure>
+<pre><code>---------------------------------------------------------------------------
+
+ImportError                               Traceback (most recent call last)
+
+&lt;ipython-input-1-98cd3281928c&gt; in &lt;module&gt;()
+----&gt; 1 import keras
+            2 keras.__version__
+
+
+ImportError: No module named &apos;keras&apos;
+</code></pre><h1 id="A-first-look-at-a-neural-network"><a href="#A-first-look-at-a-neural-network" class="headerlink" title="A first look at a neural network"></a>A first look at a neural network</h1><p>This notebook contains the code samples found in Chapter 2, Section 1 of <a href="https://www.manning.com/books/deep-learning-with-python?a_aid=keras&amp;a_bid=76564dff" target="_blank" rel="noopener">Deep Learning with Python</a>. Note that the original text features far more content, in particular further explanations and figures: in this notebook, you will only find source code and related comments.</p>
+<hr>
+<p>We will now take a look at a first concrete example of a neural network, which makes use of the Python library Keras to learn to classify<br>hand-written digits. Unless you already have experience with Keras or similar libraries, you will not understand everything about this<br>first example right away. You probably haven’t even installed Keras yet. Don’t worry, that is perfectly fine. In the next chapter, we will<br>review each element in our example and explain them in detail. So don’t worry if some steps seem arbitrary or look like magic to you!<br>We’ve got to start somewhere.</p>
+<p>The problem we are trying to solve here is to classify grayscale images of handwritten digits (28 pixels by 28 pixels), into their 10<br>categories (0 to 9). The dataset we will use is the MNIST dataset, a classic dataset in the machine learning community, which has been<br>around for almost as long as the field itself and has been very intensively studied. It’s a set of 60,000 training images, plus 10,000 test<br>images, assembled by the National Institute of Standards and Technology (the NIST in MNIST) in the 1980s. You can think of “solving” MNIST<br>as the “Hello World” of deep learning – it’s what you do to verify that your algorithms are working as expected. As you become a machine<br>learning practitioner, you will see MNIST come up over and over again, in scientific papers, blog posts, and so on.</p>
+<p>The MNIST dataset comes pre-loaded in Keras, in the form of a set of four Numpy arrays:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> keras.datasets <span class="keyword">import</span> mnist</span><br><span class="line"></span><br><span class="line">(train_images, train_labels), (test_images, test_labels) = mnist.load_data()</span><br></pre></td></tr></table></figure>
+<p><code>train_images</code> and <code>train_labels</code> form the “training set”, the data that the model will learn from. The model will then be tested on the<br>“test set”, <code>test_images</code> and <code>test_labels</code>. Our images are encoded as Numpy arrays, and the labels are simply an array of digits, ranging<br>from 0 to 9. There is a one-to-one correspondence between the images and the labels.</p>
+<p>Let’s have a look at the training data:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">train_images.shape</span><br></pre></td></tr></table></figure>
+<pre><code>(60000, 28, 28)
+</code></pre><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">len(train_labels)</span><br></pre></td></tr></table></figure>
+<pre><code>60000
+</code></pre><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">train_labels</span><br></pre></td></tr></table></figure>
+<pre><code>array([5, 0, 4, ..., 5, 6, 8], dtype=uint8)
+</code></pre><p>Let’s have a look at the test data:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">test_images.shape</span><br></pre></td></tr></table></figure>
+<pre><code>(10000, 28, 28)
+</code></pre><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">len(test_labels)</span><br></pre></td></tr></table></figure>
+<pre><code>10000
+</code></pre><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">test_labels</span><br></pre></td></tr></table></figure>
+<pre><code>array([7, 2, 1, ..., 4, 5, 6], dtype=uint8)
+</code></pre><p>Our workflow will be as follow: first we will present our neural network with the training data, <code>train_images</code> and <code>train_labels</code>. The<br>network will then learn to associate images and labels. Finally, we will ask the network to produce predictions for <code>test_images</code>, and we<br>will verify if these predictions match the labels from <code>test_labels</code>.</p>
+<p>Let’s build our network – again, remember that you aren’t supposed to understand everything about this example just yet.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> keras <span class="keyword">import</span> models</span><br><span class="line"><span class="keyword">from</span> keras <span class="keyword">import</span> layers</span><br><span class="line"></span><br><span class="line">network = models.Sequential()</span><br><span class="line">network.add(layers.Dense(<span class="number">512</span>, activation=<span class="string">'relu'</span>, input_shape=(<span class="number">28</span> * <span class="number">28</span>,)))</span><br><span class="line">network.add(layers.Dense(<span class="number">10</span>, activation=<span class="string">'softmax'</span>))</span><br></pre></td></tr></table></figure>
+<p>The core building block of neural networks is the “layer”, a data-processing module which you can conceive as a “filter” for data. Some<br>data comes in, and comes out in a more useful form. Precisely, layers extract <em>representations</em> out of the data fed into them – hopefully<br>representations that are more meaningful for the problem at hand. Most of deep learning really consists of chaining together simple layers<br>which will implement a form of progressive “data distillation”. A deep learning model is like a sieve for data processing, made of a<br>succession of increasingly refined data filters – the “layers”.</p>
+<p>Here our network consists of a sequence of two <code>Dense</code> layers, which are densely-connected (also called “fully-connected”) neural layers.<br>The second (and last) layer is a 10-way “softmax” layer, which means it will return an array of 10 probability scores (summing to 1). Each<br>score will be the probability that the current digit image belongs to one of our 10 digit classes.</p>
+<p>To make our network ready for training, we need to pick three more things, as part of “compilation” step:</p>
+<ul>
+<li>A loss function: the is how the network will be able to measure how good a job it is doing on its training data, and thus how it will be<br>able to steer itself in the right direction.</li>
+<li>An optimizer: this is the mechanism through which the network will update itself based on the data it sees and its loss function.</li>
+<li>Metrics to monitor during training and testing. Here we will only care about accuracy (the fraction of the images that were correctly<br>classified).</li>
+</ul>
+<p>The exact purpose of the loss function and the optimizer will be made clear throughout the next two chapters.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">network.compile(optimizer=<span class="string">'rmsprop'</span>,</span><br><span class="line">								loss=<span class="string">'categorical_crossentropy'</span>,</span><br><span class="line">								metrics=[<span class="string">'accuracy'</span>])</span><br></pre></td></tr></table></figure>
+<pre><code>---------------------------------------------------------------------------
+
+NameError                                 Traceback (most recent call last)
+
+&lt;ipython-input-2-eba029efc06a&gt; in &lt;module&gt;()
+----&gt; 1 network.compile(optimizer=&apos;rmsprop&apos;,
+            2                 loss=&apos;categorical_crossentropy&apos;,
+            3                 metrics=[&apos;accuracy&apos;])
+
+
+NameError: name &apos;network&apos; is not defined
+</code></pre><p>Before training, we will preprocess our data by reshaping it into the shape that the network expects, and scaling it so that all values are in<br>the <code>[0, 1]</code> interval. Previously, our training images for instance were stored in an array of shape <code>(60000, 28, 28)</code> of type <code>uint8</code> with<br>values in the <code>[0, 255]</code> interval. We transform it into a <code>float32</code> array of shape <code>(60000, 28 * 28)</code> with values between 0 and 1.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">train_images = train_images.reshape((<span class="number">60000</span>, <span class="number">28</span> * <span class="number">28</span>))</span><br><span class="line">train_images = train_images.astype(<span class="string">'float32'</span>) / <span class="number">255</span></span><br><span class="line"></span><br><span class="line">test_images = test_images.reshape((<span class="number">10000</span>, <span class="number">28</span> * <span class="number">28</span>))</span><br><span class="line">test_images = test_images.astype(<span class="string">'float32'</span>) / <span class="number">255</span></span><br></pre></td></tr></table></figure>
+<p>We also need to categorically encode the labels, a step which we explain in chapter 3:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> keras.utils <span class="keyword">import</span> to_categorical</span><br><span class="line"></span><br><span class="line">train_labels = to_categorical(train_labels)</span><br><span class="line">test_labels = to_categorical(test_labels)</span><br></pre></td></tr></table></figure>
+<p>We are now ready to train our network, which in Keras is done via a call to the <code>fit</code> method of the network:<br>we “fit” the model to its training data.</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">network.fit(train_images, train_labels, epochs=<span class="number">5</span>, batch_size=<span class="number">128</span>)</span><br></pre></td></tr></table></figure>
+<pre><code>Epoch 1/5
+60000/60000 [==============================] - 2s - loss: 0.2577 - acc: 0.9245     
+Epoch 2/5
+60000/60000 [==============================] - 1s - loss: 0.1042 - acc: 0.9690     
+Epoch 3/5
+60000/60000 [==============================] - 1s - loss: 0.0687 - acc: 0.9793     
+Epoch 4/5
+60000/60000 [==============================] - 1s - loss: 0.0508 - acc: 0.9848     
+Epoch 5/5
+60000/60000 [==============================] - 1s - loss: 0.0382 - acc: 0.9890     
+
+
+
+
+
+&lt;keras.callbacks.History at 0x7fce5fed5fd0&gt;
+</code></pre><p>Two quantities are being displayed during training: the “loss” of the network over the training data, and the accuracy of the network over<br>the training data.</p>
+<p>We quickly reach an accuracy of 0.989 (i.e. 98.9%) on the training data. Now let’s check that our model performs well on the test set too:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">test_loss, test_acc = network.evaluate(test_images, test_labels)</span><br></pre></td></tr></table></figure>
+<pre><code>9536/10000 [===========================&gt;..] - ETA: 0s
+</code></pre><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">print(<span class="string">'test_acc:'</span>, test_acc)</span><br></pre></td></tr></table></figure>
+<pre><code>test_acc: 0.9777
+</code></pre><p>Our test set accuracy turns out to be 97.8% – that’s quite a bit lower than the training set accuracy.<br>This gap between training accuracy and test accuracy is an example of “overfitting”,<br>the fact that machine learning models tend to perform worse on new data than on their training data.<br>Overfitting will be a central topic in chapter 3.</p>
+<p>This concludes our very first example – you just saw how we could build and a train a neural network to classify handwritten digits, in<br>less than 20 lines of Python code. In the next chapter, we will go in detail over every moving piece we just previewed, and clarify what is really<br>going on behind the scenes. You will learn about “tensors”, the data-storing objects going into the network, about tensor operations, which<br>layers are made of, and about gradient descent, which allows our network to learn from its training examples.</p>
+]]></content>
+      
+        
+    </entry>
+    
+    <entry>
+      <title><![CDATA[Hello World]]></title>
+      <url>/2018/02/02/hello-world/</url>
+      <content type="html"><![CDATA[<p>Welcome to <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="noopener">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="noopener">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="noopener">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="noopener">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="noopener">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="noopener">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+<p>More info: <a href="https://hexo.io/docs/deployment.html" target="_blank" rel="noopener">Deployment</a></p>
+]]></content>
+      
+        
+    </entry>
+    
+  
+  
+</search>
