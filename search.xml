@@ -3,6 +3,14 @@
   
     
     <entry>
+      <title><![CDATA[jupyter]]></title>
+      <url>/2018/02/03/jupyter/</url>
+      <content type="html"></content>
+      
+        
+    </entry>
+    
+    <entry>
       <title><![CDATA[test]]></title>
       <url>/2018/02/02/test/</url>
       <content type="html"><![CDATA[<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> keras</span><br><span class="line">keras.__version__</span><br></pre></td></tr></table></figure>
